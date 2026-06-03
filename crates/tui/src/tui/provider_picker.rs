@@ -378,10 +378,7 @@ impl ModalView for ProviderPickerView {
                         ViewAction::None
                     }
                 }
-                KeyCode::Char(c)
-                    if key.modifiers.is_empty()
-                        && c.eq_ignore_ascii_case(&'r') =>
-                {
+                KeyCode::Char(c) if key.modifiers.is_empty() && c.eq_ignore_ascii_case(&'r') => {
                     self.enter_key_entry();
                     ViewAction::None
                 }
@@ -609,10 +606,7 @@ mod tests {
         let config = Config::default();
         let mut picker = ProviderPickerView::new(ApiProvider::Deepseek, &config);
 
-        let action = picker.handle_key(KeyEvent::new(
-            KeyCode::Char('r'),
-            KeyModifiers::CONTROL,
-        ));
+        let action = picker.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL));
 
         assert!(matches!(action, ViewAction::None));
         assert_eq!(picker.stage, Stage::List);

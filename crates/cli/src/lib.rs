@@ -1001,14 +1001,8 @@ fn auth_status_lines_for_provider(
     let active_marker = if is_active { " (active provider)" } else { "" };
 
     let provider_cfg = store.config.providers.for_provider(provider);
-    let base_url = provider_cfg
-        .base_url
-        .as_deref()
-        .unwrap_or("(default)");
-    let model = provider_cfg
-        .model
-        .as_deref()
-        .unwrap_or("(default)");
+    let base_url = provider_cfg.base_url.as_deref().unwrap_or("(default)");
+    let model = provider_cfg.model.as_deref().unwrap_or("(default)");
 
     vec![
         format!("provider: {}{}", provider.as_str(), active_marker),

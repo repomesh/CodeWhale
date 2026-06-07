@@ -701,14 +701,6 @@ impl Personality {
 
 // ── Composition ───────────────────────────────────────────────────────
 
-fn default_approval_mode_for_mode(mode: AppMode) -> ApprovalMode {
-    match mode {
-        AppMode::Agent => ApprovalMode::Suggest,
-        AppMode::Yolo => ApprovalMode::Auto,
-        AppMode::Plan => ApprovalMode::Never,
-    }
-}
-
 /// Generate a static reference block containing all mode and approval policy
 /// descriptions. This lives in the frozen system-prompt prefix (sent once per
 /// session) so the per-turn `<runtime_prompt>` tag can be a minimal pointer

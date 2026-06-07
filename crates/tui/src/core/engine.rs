@@ -2650,27 +2650,19 @@ fn agent_approval_mode_for_turn(
 /// model looks up the corresponding rules from the system prompt.  Reduces
 /// per-request overhead from ~500 tokens to ~12 tokens.
 fn runtime_prompt_text(mode: AppMode, approval_mode: crate::tui::approval::ApprovalMode) -> String {
-    let mode_str = mode_prompt_marker_value(mode);
-    let approval_str = approval_prompt_marker_value(approval_mode);
-    format!(
-        "<runtime_prompt visibility=\"internal\" mode=\"{mode_str}\" approval=\"{approval_str}\"/>"
-    )
-}
-
-fn mode_prompt_marker_value(mode: AppMode) -> &'static str {
-    match mode {
+    let mode_str = match mode {
         AppMode::Agent => "agent",
         AppMode::Plan => "plan",
         AppMode::Yolo => "yolo",
-    }
-}
-
-fn approval_prompt_marker_value(approval_mode: crate::tui::approval::ApprovalMode) -> &'static str {
-    match approval_mode {
+    };
+    let approval_str = match approval_mode {
         crate::tui::approval::ApprovalMode::Auto => "auto",
         crate::tui::approval::ApprovalMode::Suggest => "suggest",
         crate::tui::approval::ApprovalMode::Never => "never",
-    }
+    };
+    format!(
+        "<runtime_prompt visibility=\"internal\" mode=\"{mode_str}\" approval=\"{approval_str}\"/>"
+    )
 }
 
 /// Spawn the engine in a background task

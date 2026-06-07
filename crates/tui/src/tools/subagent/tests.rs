@@ -1658,8 +1658,15 @@ async fn cleanup_keeps_recent_running_agent() {
 
 #[tokio::test]
 async fn touch_refreshes_stale_running_agent_heartbeat() {
+    // Use a heartbeat timeout that is comfortably larger than the synchronous
+    // work between `touch()` and the `cleanup()` assertion below. With a 1ms
+    // timeout the test was flaky on loaded CI runners (notably Windows, whose
+    // scheduler can deschedule this thread for >1ms): the just-touched agent
+    // would tip back over the staleness threshold before `cleanup()` ran and
+    // get reaped, so `cleanup()` returned 1 instead of 0. A 50ms timeout keeps
+    // the staleness logic exercised while removing the timing race.
     let mut manager = SubAgentManager::new(PathBuf::from("."), 1)
-        .with_running_heartbeat_timeout(Duration::from_millis(1));
+        .with_running_heartbeat_timeout(Duration::from_millis(50));
     let (input_tx, _input_rx) = mpsc::unbounded_channel();
     let mut agent = SubAgent::new(
         "test_agent_touched".to_string(),
@@ -1678,7 +1685,9 @@ async fn touch_refreshes_stale_running_agent_heartbeat() {
     }));
     let agent_id = agent.id.clone();
     manager.agents.insert(agent_id.clone(), agent);
-    tokio::time::sleep(Duration::from_millis(5)).await;
+    // Sleep well past the 50ms heartbeat timeout so the agent is reliably stale
+    // even if the timer fires early under coarse OS timer granularity.
+    tokio::time::sleep(Duration::from_millis(150)).await;
 
     assert_eq!(manager.running_count(), 0);
     assert!(manager.touch(&agent_id));

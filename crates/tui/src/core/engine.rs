@@ -1761,14 +1761,21 @@ impl Engine {
                     } else {
                         None
                     };
-                    Some(
-                        builder
-                            .with_subagent_tools(
-                                self.subagent_manager.clone(),
-                                runtime.expect("sub-agent runtime should exist with active client"),
-                            )
-                            .build(tool_context),
-                    )
+                    if let Some(subagent_runtime) = runtime {
+                        Some(
+                            builder
+                                .with_subagent_tools(
+                                    self.subagent_manager.clone(),
+                                    subagent_runtime,
+                                )
+                                .build(tool_context),
+                        )
+                    } else {
+                        tracing::warn!(
+                            "Sub-agents enabled but no API client available, falling back to basic tool set"
+                        );
+                        Some(builder.build(tool_context))
+                    }
                 } else {
                     Some(builder.build(tool_context))
                 }
@@ -2283,7 +2290,7 @@ impl Engine {
         let pool = match self.ensure_mcp_pool().await {
             Ok(pool) => pool,
             Err(err) => {
-                let _ = self.tx_event.send(Event::status(err.to_string())).await;
+                let _ = self.tx_event.send(Event::status(format!("{err:#}"))).await;
                 return Vec::new();
             }
         };
@@ -2598,13 +2605,10 @@ fn goal_objective_for_prompt(
 ) -> Option<String> {
     match goal_state.lock() {
         Ok(state) => {
-            if state.objective().is_some() {
-                return state.is_active().then(|| {
-                    state
-                        .objective()
-                        .expect("checked goal objective")
-                        .to_string()
-                });
+            if let Some(objective) = state.objective() {
+                // Preserve original behavior: return None (not fallback) when
+                // objective exists but goal is inactive.
+                return state.is_active().then(|| objective.to_string());
             }
         }
         Err(err) => tracing::warn!("goal state lock poisoned while building prompt: {err}"),

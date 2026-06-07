@@ -884,7 +884,9 @@ async fn process_app_request(
             let message = result.err().map(|e| e.to_string());
             let snapshot = cfg.clone();
             drop(cfg);
-            let _ = persist_config(state, snapshot).await;
+            if let Err(e) = persist_config(state, snapshot).await {
+                tracing::error!("Failed to persist config after set: {e}");
+            }
             AppResponse {
                 ok,
                 data: json!({ "key": key, "value": value, "error": message }),
@@ -898,7 +900,9 @@ async fn process_app_request(
             let message = result.err().map(|e| e.to_string());
             let snapshot = cfg.clone();
             drop(cfg);
-            let _ = persist_config(state, snapshot).await;
+            if let Err(e) = persist_config(state, snapshot).await {
+                tracing::error!("Failed to persist config after unset: {e}");
+            }
             AppResponse {
                 ok,
                 data: json!({ "key": key, "error": message }),

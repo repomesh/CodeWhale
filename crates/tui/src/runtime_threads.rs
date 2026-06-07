@@ -826,7 +826,10 @@ impl RuntimeThreadManager {
     ) -> bool {
         let sender = match self.pending_approvals.lock() {
             Ok(mut map) => map.remove(approval_id),
-            Err(_) => return false,
+            Err(e) => {
+                tracing::error!("pending_approvals mutex poisoned: {e}");
+                return false;
+            }
         };
         match sender {
             Some(tx) => tx.send(decision).is_ok(),

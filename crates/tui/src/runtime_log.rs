@@ -176,7 +176,10 @@ pub fn init() -> Result<TuiLogGuard> {
     #[cfg(windows)]
     let (saved_stderr_handle, redirected_stderr_handle) = match redirect_stderr_to(&file) {
         Ok((saved, dup)) => (Some(saved), Some(dup)),
-        Err(_) => (None, None),
+        Err(e) => {
+            tracing::warn!("Failed to redirect stderr to log file: {e}");
+            (None, None)
+        }
     };
 
     Ok(TuiLogGuard {

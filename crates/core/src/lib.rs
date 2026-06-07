@@ -748,7 +748,9 @@ impl Runtime {
         hooks: HookDispatcher,
     ) -> Self {
         let mut jobs = JobManager::default();
-        let _ = jobs.load_from_store(&state);
+        if let Err(e) = jobs.load_from_store(&state) {
+            tracing::warn!("Failed to load job store, starting with empty job list: {e}");
+        }
         Self {
             config,
             model_registry,

@@ -2138,7 +2138,13 @@ pub fn load_project_config(workspace: &Path) -> Option<ConfigToml> {
         if path.exists()
             && let Ok(raw) = fs::read_to_string(&path)
         {
-            return toml::from_str(&raw).ok();
+            match toml::from_str(&raw) {
+                Ok(config) => return Some(config),
+                Err(e) => {
+                    tracing::warn!("Failed to parse project config {}: {e}", path.display());
+                    return None;
+                }
+            }
         }
     }
     None
@@ -3181,15 +3187,33 @@ impl EnvRuntimeOverrides {
             log_level: std::env::var("DEEPSEEK_LOG_LEVEL").ok(),
             telemetry: std::env::var("DEEPSEEK_TELEMETRY")
                 .ok()
-                .and_then(|v| parse_bool(&v).ok()),
+                .and_then(|v| match parse_bool(&v) {
+                    Ok(b) => Some(b),
+                    Err(_) => {
+                        tracing::warn!("Invalid DEEPSEEK_TELEMETRY value '{v}', expected true/false");
+                        None
+                    }
+                }),
             approval_policy: std::env::var("DEEPSEEK_APPROVAL_POLICY").ok(),
             sandbox_mode: std::env::var("DEEPSEEK_SANDBOX_MODE").ok(),
             yolo: std::env::var("DEEPSEEK_YOLO")
                 .ok()
-                .and_then(|v| parse_bool(&v).ok()),
+                .and_then(|v| match parse_bool(&v) {
+                    Ok(b) => Some(b),
+                    Err(_) => {
+                        tracing::warn!("Invalid DEEPSEEK_YOLO value '{v}', expected true/false");
+                        None
+                    }
+                }),
             http_headers: std::env::var("DEEPSEEK_HTTP_HEADERS")
                 .ok()
-                .and_then(|value| parse_http_headers(&value).ok())
+                .and_then(|value| match parse_http_headers(&value) {
+                    Ok(h) => Some(h),
+                    Err(_) => {
+                        tracing::warn!("Invalid DEEPSEEK_HTTP_HEADERS value, expected format: header1=val1,header2=val2");
+                        None
+                    }
+                })
                 .filter(|headers| !headers.is_empty()),
             deepseek_base_url: std::env::var("CODEWHALE_BASE_URL")
                 .or_else(|_| std::env::var("DEEPSEEK_BASE_URL"))

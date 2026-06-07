@@ -2026,11 +2026,11 @@ impl McpPool {
     /// Get or create a connection to a server
     pub async fn get_or_connect(&mut self, server_name: &str) -> Result<&mut McpConnection> {
         // Lazy auto-reload (#1267 part 2): cheap mtime-then-hash check before
-        // each connection lookup. Errors from the reload check (stat failure,
-        // partial config parse) are swallowed here so a transient FS hiccup
-        // can't take down the whole tool dispatch — the user still gets the
-        // existing connection to respond to.
-        let _ = self.reload_if_config_changed().await;
+        // each connection lookup. Transient FS errors are logged but not
+        // propagated so a brief hiccup can't take down the whole tool dispatch.
+        if let Err(e) = self.reload_if_config_changed().await {
+            tracing::warn!("MCP config reload check failed: {e:#}");
+        }
 
         let is_ready = self
             .connections
@@ -2170,7 +2170,10 @@ impl McpPool {
             return Ok(resources);
         }
 
-        let _ = self.connect_all().await;
+        let errors = self.connect_all().await;
+        for (server, err) in errors {
+            tracing::warn!("Failed to connect MCP server '{server}' for resources: {err:#}");
+        }
         let mut items = Vec::new();
         for (server, conn) in &self.connections {
             for resource in conn.resources() {
@@ -2208,7 +2211,12 @@ impl McpPool {
             return Ok(templates);
         }
 
-        let _ = self.connect_all().await;
+        let errors = self.connect_all().await;
+        for (server, err) in errors {
+            tracing::warn!(
+                "Failed to connect MCP server '{server}' for resource templates: {err:#}"
+            );
+        }
         let mut items = Vec::new();
         for (server, conn) in &self.connections {
             for template in conn.resource_templates() {

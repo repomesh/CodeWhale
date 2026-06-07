@@ -561,8 +561,57 @@ impl ConfigToml {
     ) -> Option<&HarnessProfile> {
         self.harness_profiles
             .iter()
+            .chain(built_in_harness_profiles().iter())
             .find(|profile| profile.matches_route(provider_route, model))
     }
+}
+
+/// Built-in profile seeds for common provider/model families.
+///
+/// User-configured profiles are always checked first; these seeds only provide
+/// a stable resolver result when config has no narrower match.
+#[must_use]
+pub fn built_in_harness_profiles() -> &'static [HarnessProfile] {
+    static PROFILES: OnceLock<Vec<HarnessProfile>> = OnceLock::new();
+    PROFILES.get_or_init(|| {
+        vec![
+            HarnessProfile {
+                provider_route: "deepseek".to_string(),
+                model_pattern: "deepseek-v4*".to_string(),
+                posture: HarnessPosture::cache_heavy(),
+            },
+            HarnessProfile {
+                provider_route: "xiaomi-mimo".to_string(),
+                model_pattern: "mimo-v2.5*".to_string(),
+                posture: HarnessPosture::cache_heavy(),
+            },
+            HarnessProfile {
+                provider_route: "arcee".to_string(),
+                model_pattern: "trinity-large-thinking".to_string(),
+                posture: HarnessPosture::cache_heavy(),
+            },
+            HarnessProfile {
+                provider_route: "huggingface".to_string(),
+                model_pattern: "*".to_string(),
+                posture: HarnessPosture::lean(),
+            },
+            HarnessProfile {
+                provider_route: "sglang".to_string(),
+                model_pattern: "*".to_string(),
+                posture: HarnessPosture::lean(),
+            },
+            HarnessProfile {
+                provider_route: "vllm".to_string(),
+                model_pattern: "*".to_string(),
+                posture: HarnessPosture::lean(),
+            },
+            HarnessProfile {
+                provider_route: "ollama".to_string(),
+                model_pattern: "*".to_string(),
+                posture: HarnessPosture::lean(),
+            },
+        ]
+    })
 }
 
 fn provider_routes_equal(expected: &str, actual: &str) -> bool {
@@ -6023,6 +6072,56 @@ safety_posture = "strict"
     }
 
     #[test]
+    fn resolve_harness_profile_uses_built_in_seed_when_config_has_no_match() {
+        let config = ConfigToml::default();
+
+        let xiaomi = config
+            .resolve_harness_profile("xiaomi", "mimo-v2.5-pro")
+            .expect("direct Xiaomi MiMo seed should resolve");
+        assert_eq!(xiaomi.provider_route, "xiaomi-mimo");
+        assert_eq!(xiaomi.posture.kind, HarnessPostureKind::CacheHeavy);
+
+        let arcee = config
+            .resolve_harness_profile("arcee", "trinity-large-thinking")
+            .expect("direct Arcee seed should resolve");
+        assert_eq!(arcee.posture.kind, HarnessPostureKind::CacheHeavy);
+
+        let local = config
+            .resolve_harness_profile("vllm", "Qwen/Qwen3.6-Coder")
+            .expect("local seed should resolve");
+        assert_eq!(local.posture.kind, HarnessPostureKind::Lean);
+        assert!(local.posture.prefer_codebase_search);
+    }
+
+    #[test]
+    fn configured_harness_profile_overrides_built_in_seed() {
+        let config = ConfigToml {
+            harness_profiles: vec![HarnessProfile {
+                provider_route: "xiaomi-mimo".to_string(),
+                model_pattern: "mimo-v2.5-pro".to_string(),
+                posture: HarnessPosture {
+                    kind: HarnessPostureKind::Custom,
+                    max_subagents: 3,
+                    prefer_codebase_search: true,
+                    compaction_strategy: HarnessCompactionStrategy::Default,
+                    tool_surface: HarnessToolSurface::Auto,
+                    safety_posture: HarnessSafetyPosture::Strict,
+                },
+            }],
+            ..ConfigToml::default()
+        };
+
+        let profile = config
+            .resolve_harness_profile("xiaomi-mimo", "mimo-v2.5-pro")
+            .expect("configured profile should match first");
+
+        assert_eq!(profile.posture.kind, HarnessPostureKind::Custom);
+        assert_eq!(profile.posture.max_subagents, 3);
+        assert_eq!(profile.posture.tool_surface, HarnessToolSurface::Auto);
+        assert_eq!(profile.posture.safety_posture, HarnessSafetyPosture::Strict);
+    }
+
+    #[test]
     fn resolve_harness_profile_returns_none_when_route_or_model_misses() {
         let config = ConfigToml {
             harness_profiles: vec![HarnessProfile {
@@ -6040,7 +6139,12 @@ safety_posture = "strict"
         );
         assert!(
             config
-                .resolve_harness_profile("hf", "Qwen/Qwen3.6-Coder")
+                .resolve_harness_profile("deepseek", "Qwen/Qwen3.6-Coder")
+                .is_none()
+        );
+        assert!(
+            config
+                .resolve_harness_profile("openai", "mimo-v2.5-pro")
                 .is_none()
         );
     }

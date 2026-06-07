@@ -5630,6 +5630,9 @@ struct ExecStreamMeta {
     input_tokens: u32,
     output_tokens: u32,
     session_id: String,
+    resume_command: String,
+    workspace: String,
+    message_count: usize,
     status: Option<String>,
 }
 
@@ -5663,6 +5666,14 @@ enum ExecStreamEvent {
 fn emit_exec_stream_event(event: &ExecStreamEvent) -> Result<()> {
     println!("{}", serde_json::to_string(event)?);
     Ok(())
+}
+
+fn exec_resume_command(session_id: &str) -> String {
+    if session_id.trim().is_empty() {
+        String::new()
+    } else {
+        format!("codewhale exec --resume {session_id}")
+    }
 }
 
 fn persist_exec_session(
@@ -6133,7 +6144,13 @@ async fn run_exec_agent(
                             model: latest_model.clone(),
                             input_tokens: usage.input_tokens,
                             output_tokens: usage.output_tokens,
+                            resume_command: saved_session_id
+                                .as_deref()
+                                .map(exec_resume_command)
+                                .unwrap_or_default(),
                             session_id: saved_session_id.unwrap_or_default(),
+                            workspace: latest_workspace.display().to_string(),
+                            message_count: latest_messages.len(),
                             status: summary.status.clone(),
                         },
                     })?;
@@ -6790,6 +6807,34 @@ mod terminal_mode_tests {
         assert!(!json.contains('\n'));
         let parsed: serde_json::Value = serde_json::from_str(&json).expect("valid json");
         assert_eq!(parsed["type"], "tool_result");
+    }
+
+    #[test]
+    fn exec_stream_metadata_includes_resume_breadcrumbs() {
+        let event = ExecStreamEvent::Metadata {
+            meta: ExecStreamMeta {
+                model: "deepseek-v4-flash".to_string(),
+                input_tokens: 123,
+                output_tokens: 45,
+                session_id: "abc123".to_string(),
+                resume_command: exec_resume_command("abc123"),
+                workspace: "/tmp/work".to_string(),
+                message_count: 4,
+                status: Some("completed".to_string()),
+            },
+        };
+
+        let json = serde_json::to_string(&event).expect("serializes");
+        assert!(!json.contains('\n'));
+        let parsed: serde_json::Value = serde_json::from_str(&json).expect("valid json");
+        assert_eq!(parsed["type"], "metadata");
+        assert_eq!(parsed["meta"]["session_id"], "abc123");
+        assert_eq!(
+            parsed["meta"]["resume_command"],
+            "codewhale exec --resume abc123"
+        );
+        assert_eq!(parsed["meta"]["workspace"], "/tmp/work");
+        assert_eq!(parsed["meta"]["message_count"], 4);
     }
 
     #[test]

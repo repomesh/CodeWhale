@@ -383,6 +383,9 @@ If a profile is selected but missing, codewhale exits with an error listing avai
 v0.9 adds a config data model for model-specific harness posture. This is a
 preview schema: it can be parsed and tested, but runtime provider/model
 selection and prompt/tool behavior are wired in later v0.9 slices.
+When no configured profile matches, the resolver falls back to built-in seed
+profiles for the model families listed in the cutline doc. Configured profiles
+always take precedence over those seeds.
 
 ```toml
 [[harness_profiles]]

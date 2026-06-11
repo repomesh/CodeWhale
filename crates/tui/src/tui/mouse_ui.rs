@@ -476,10 +476,9 @@ fn sidebar_click_action(app: &App, mouse: MouseEvent) -> Option<String> {
                     .content_area
                     .y
                     .saturating_add(section.content_area.height)
+            && let Some(row) = section.rows.iter().find(|row| row.row_y == mouse.row)
         {
-            if let Some(row) = section.rows.iter().find(|row| row.row_y == mouse.row) {
-                return row.click_action.clone();
-            }
+            return row.click_action.clone();
         }
     }
     None

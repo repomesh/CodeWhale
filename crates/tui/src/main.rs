@@ -991,7 +991,8 @@ async fn main() -> Result<()> {
                     || args.output_format == ExecOutputFormat::StreamJson
                     || args.max_turns.is_some()
                     || args.allowed_tools.is_some()
-                    || args.disallowed_tools.is_some();
+                    || args.disallowed_tools.is_some()
+                    || args.append_system_prompt.is_some();
                 if needs_engine {
                     let max_subagents = cli.max_subagents.map_or_else(
                         || config.max_subagents(),
@@ -6233,6 +6234,15 @@ async fn run_exec_agent(
                 latest_model = model;
                 latest_workspace = workspace;
             }
+            // #3027: surface the engine's max-steps notice in text mode so a
+            // --max-turns run that stops early says why instead of going quiet.
+            Event::Status { message }
+                if output_format == ExecOutputFormat::Text
+                    && !json_output
+                    && message.contains("Reached maximum steps") =>
+            {
+                eprintln!("{message}");
+            }
             _ => {}
         }
     }
@@ -6691,6 +6701,45 @@ mod terminal_mode_tests {
 
         assert_eq!(args.session_id.as_deref(), Some("abc123"));
         assert_eq!(args.output_format, ExecOutputFormat::Text);
+    }
+
+    #[test]
+    fn exec_parses_tool_gate_and_hardening_flags() {
+        let cli = parse_cli(&[
+            "codewhale",
+            "exec",
+            "--allowed-tools",
+            "read_file,grep_files",
+            "--disallowed-tools",
+            "exec_shell",
+            "--max-turns",
+            "7",
+            "--append-system-prompt",
+            "extra rules",
+            "do the thing",
+        ]);
+        let Some(Commands::Exec(args)) = cli.command else {
+            panic!("expected exec command");
+        };
+
+        assert_eq!(
+            args.allowed_tools.as_deref(),
+            Some(&["read_file".to_string(), "grep_files".to_string()][..])
+        );
+        assert_eq!(
+            args.disallowed_tools.as_deref(),
+            Some(&["exec_shell".to_string()][..])
+        );
+        assert_eq!(args.max_turns, Some(7));
+        assert_eq!(args.append_system_prompt.as_deref(), Some("extra rules"));
+        assert_eq!(args.prompt, vec!["do the thing"]);
+    }
+
+    #[test]
+    fn exec_rejects_zero_max_turns() {
+        let err = Cli::try_parse_from(["codewhale", "exec", "--max-turns", "0", "hello"])
+            .expect_err("max-turns must be >= 1");
+        assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation);
     }
 
     #[test]

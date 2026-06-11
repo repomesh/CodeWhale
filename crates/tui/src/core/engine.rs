@@ -325,6 +325,9 @@ pub struct EngineConfig {
     /// Tool restriction from custom slash command frontmatter.
     /// `None` means the current turn may use the normal tool set.
     pub allowed_tools: Option<Vec<String>>,
+    /// Tool deny-list.  Deny always wins over allow (#3027).
+    /// `None` means no tools are explicitly denied.
+    pub disallowed_tools: Option<Vec<String>>,
     /// Hook executor for control-plane hooks.
     /// `ToolCallBefore` hooks may deny a tool call with exit code 2.
     pub hook_executor: Option<std::sync::Arc<crate::hooks::HookExecutor>>,
@@ -409,6 +412,7 @@ impl Default for EngineConfig {
             strict_tool_mode: false,
             goal_objective: None,
             allowed_tools: None,
+            disallowed_tools: None,
             hook_executor: None,
             locale_tag: "en".to_string(),
             workshop: None,
@@ -1809,6 +1813,11 @@ impl Engine {
                     tool.defer_loading = Some(false);
                 }
             }
+            filter_tool_catalog_for_gates(
+                &mut catalog,
+                self.config.allowed_tools.as_deref(),
+                self.config.disallowed_tools.as_deref(),
+            );
             catalog
         });
         let tool_catalog_for_event = tools.clone();
@@ -2780,6 +2789,19 @@ pub(crate) use token_estimate_cache::TokenEstimateCache;
 
 pub(crate) fn default_active_native_tool_names() -> &'static [&'static str] {
     tool_catalog::DEFAULT_ACTIVE_NATIVE_TOOLS
+}
+
+/// Drop catalog entries the execution gates would reject (#3027): the model
+/// should never be advertised a tool it cannot call. Deny wins over allow.
+fn filter_tool_catalog_for_gates(
+    catalog: &mut Vec<Tool>,
+    allowed_tools: Option<&[String]>,
+    disallowed_tools: Option<&[String]>,
+) {
+    catalog.retain(|tool| {
+        !turn_loop::command_denies_tool(disallowed_tools, &tool.name)
+            && turn_loop::command_allows_tool(allowed_tools, &tool.name)
+    });
 }
 
 use self::approval::{ApprovalDecision, ApprovalResult, UserInputDecision};

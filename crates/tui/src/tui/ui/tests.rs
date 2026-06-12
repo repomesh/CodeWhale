@@ -1263,6 +1263,32 @@ fn copy_shortcut_accepts_cmd_and_ctrl_shift_only() {
 }
 
 #[test]
+fn control_like_modifier_accepts_super_only_on_macos() {
+    use crate::tui::key_shortcuts::has_control_like_modifier_for_platform;
+
+    assert!(has_control_like_modifier_for_platform(
+        KeyModifiers::CONTROL,
+        false
+    ));
+    assert!(has_control_like_modifier_for_platform(
+        KeyModifiers::CONTROL,
+        true
+    ));
+    assert!(!has_control_like_modifier_for_platform(
+        KeyModifiers::SUPER,
+        false
+    ));
+    assert!(has_control_like_modifier_for_platform(
+        KeyModifiers::SUPER,
+        true
+    ));
+    assert!(has_control_like_modifier_for_platform(
+        KeyModifiers::SUPER | KeyModifiers::ALT,
+        true
+    ));
+}
+
+#[test]
 fn file_tree_shortcut_does_not_steal_plain_ctrl_e() {
     assert!(!crate::tui::key_shortcuts::is_file_tree_toggle_shortcut(
         &KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL,)

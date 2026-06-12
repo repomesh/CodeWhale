@@ -3382,7 +3382,7 @@ async fn run_event_loop(
             }
 
             if matches!(key.code, KeyCode::Char('b') | KeyCode::Char('B'))
-                && key.modifiers.contains(KeyModifiers::CONTROL)
+                && key_shortcuts::has_control_like_modifier(key.modifiers)
                 && app.view_stack.is_empty()
             {
                 // #3032: Ctrl+B directly backgrounds the active foreground
@@ -3582,7 +3582,7 @@ async fn run_event_loop(
                     continue;
                 }
                 KeyCode::Char('1') if key.modifiers.contains(KeyModifiers::ALT) => {
-                    if key.modifiers.contains(KeyModifiers::CONTROL) {
+                    if key_shortcuts::has_control_like_modifier(key.modifiers) {
                         app.set_sidebar_focus(SidebarFocus::Work);
                         app.status_message = Some("Sidebar focus: work".to_string());
                     } else {
@@ -3591,7 +3591,7 @@ async fn run_event_loop(
                     continue;
                 }
                 KeyCode::Char('2') if key.modifiers.contains(KeyModifiers::ALT) => {
-                    if key.modifiers.contains(KeyModifiers::CONTROL) {
+                    if key_shortcuts::has_control_like_modifier(key.modifiers) {
                         app.set_sidebar_focus(SidebarFocus::Tasks);
                         app.status_message = Some("Sidebar focus: tasks".to_string());
                     } else {
@@ -3600,7 +3600,7 @@ async fn run_event_loop(
                     continue;
                 }
                 KeyCode::Char('3') if key.modifiers.contains(KeyModifiers::ALT) => {
-                    if key.modifiers.contains(KeyModifiers::CONTROL) {
+                    if key_shortcuts::has_control_like_modifier(key.modifiers) {
                         app.set_sidebar_focus(SidebarFocus::Agents);
                         app.status_message = Some("Sidebar focus: agents".to_string());
                     } else {

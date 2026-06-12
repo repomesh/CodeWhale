@@ -50,6 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   survives the CLI/TUI boundary by honoring the CodeWhale model env alias and
   legacy DeepSeek model handoff before falling back to provider defaults.
   Thanks @hongchen1993 for the PR.
+- **macOS shortcut modifiers (#2938/#2943).** Ctrl-like shortcuts that are
+  reported as `SUPER` by macOS terminals now work for backgrounding tasks and
+  sidebar-focus chords without rewriting clipboard shortcuts. Thanks @idling11
+  for the PR.
 - **TUI mouse-report leak (#3063/#3067).** Strip raw SGR mouse coordinate
   tails from the composer even when `use_mouse_capture` is false, covering
   orphaned terminal reporting state after crashes or focus races.

@@ -1484,8 +1484,8 @@ impl ModalView for ConfigView {
                         let selected = *idx == self.selected;
                         let style = if selected {
                             Style::default()
-                                .fg(ratatui::style::Color::White)
-                                .bg(palette::DEEPSEEK_BLUE)
+                                .fg(palette::SELECTION_TEXT)
+                                .bg(palette::SELECTION_BG)
                                 .add_modifier(ratatui::style::Modifier::BOLD)
                         } else {
                             Style::default().fg(palette::TEXT_PRIMARY)
@@ -2088,6 +2088,7 @@ mod tests {
     };
     use crate::config::Config;
     use crate::localization::{Locale, MessageId, tr};
+    use crate::palette;
     use crate::settings::Settings;
     use crate::tools::subagent::{
         SubAgentAssignment, SubAgentResult, SubAgentStatus, SubAgentType,
@@ -2595,6 +2596,46 @@ base_url = "https://api.xiaomimimo.com/v1"
         assert!(
             !dump.contains("MISSING"),
             "missing-key marker leaked:\n{dump}"
+        );
+    }
+
+    #[test]
+    fn config_view_selected_row_uses_muted_selection_highlight() {
+        let mut view = create_config_view(Locale::En);
+        view.selected = view
+            .rows
+            .iter()
+            .position(|row| row.key == "theme")
+            .expect("theme row");
+        view.adjust_scroll(8);
+        let area = Rect::new(0, 0, 100, 24);
+        let mut buf = Buffer::empty(area);
+
+        view.render(area, &mut buf);
+
+        let y = view
+            .last_row_hitboxes
+            .borrow()
+            .iter()
+            .find_map(|(y, idx)| (*idx == view.selected).then_some(*y))
+            .expect("selected config row should have a hitbox");
+        let highlighted_cells = (area.x..area.x.saturating_add(area.width))
+            .filter(|&x| {
+                let cell = &buf[(x, y)];
+                !cell.symbol().trim().is_empty()
+                    && cell.bg == palette::SELECTION_BG
+                    && cell.fg == palette::SELECTION_TEXT
+            })
+            .count();
+
+        assert!(
+            highlighted_cells >= 4,
+            "selected config row should render readable selection text"
+        );
+        assert!(
+            !(area.x..area.x.saturating_add(area.width))
+                .any(|x| buf[(x, y)].bg == palette::DEEPSEEK_BLUE),
+            "selected config row should not use the bright accent background"
         );
     }
 

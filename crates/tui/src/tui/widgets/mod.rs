@@ -1454,7 +1454,7 @@ fn approval_palette(risk: RiskLevel) -> ApprovalColors {
 fn approval_selected_style() -> Style {
     Style::default()
         .fg(palette::SELECTION_TEXT)
-        .bg(palette::DEEPSEEK_BLUE)
+        .bg(palette::SELECTION_BG)
         .add_modifier(Modifier::BOLD)
 }
 
@@ -4072,21 +4072,21 @@ mod tests {
         let selected_row = (area.y..area.y.saturating_add(area.height))
             .find(|&y| {
                 (area.x..area.x.saturating_add(area.width))
-                    .any(|x| buf[(x, y)].bg == palette::DEEPSEEK_BLUE)
+                    .any(|x| buf[(x, y)].bg == palette::SELECTION_BG)
             })
-            .expect("selected approval row should use blue background");
+            .expect("selected approval row should use selection background");
         let highlighted_cells = (area.x..area.x.saturating_add(area.width))
             .filter(|&x| {
                 let cell = &buf[(x, selected_row)];
                 !cell.symbol().trim().is_empty()
-                    && cell.bg == palette::DEEPSEEK_BLUE
+                    && cell.bg == palette::SELECTION_BG
                     && cell.fg == palette::SELECTION_TEXT
             })
             .count();
 
         assert!(
             highlighted_cells >= 4,
-            "selected destructive option should render visible blue/white text"
+            "selected destructive option should render visible selection text"
         );
     }
 

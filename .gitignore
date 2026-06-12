@@ -120,6 +120,7 @@ docs/*_PLAN.md
 .envrc
 .direnv
 scripts/run_deep_swe.py
+.claude/
 
 # Benchmark artifacts and caches re-included by !scripts/**
 results/

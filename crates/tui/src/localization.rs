@@ -602,6 +602,17 @@ pub enum MessageId {
     CtxInspChangesByTurn,
     CtxInspStablePrefixOnly,
     CtxInspCacheTip,
+    // Tool family labels (card headers, sidebar, footer).
+    ToolFamilyRead,
+    ToolFamilyPatch,
+    ToolFamilyRun,
+    ToolFamilyFind,
+    ToolFamilyDelegate,
+    ToolFamilyFanout,
+    ToolFamilyRlm,
+    ToolFamilyVerify,
+    ToolFamilyThink,
+    ToolFamilyGeneric,
 }
 
 #[allow(dead_code)]
@@ -974,6 +985,16 @@ pub const ALL_MESSAGE_IDS: &[MessageId] = &[
     MessageId::CtxInspChangesByTurn,
     MessageId::CtxInspStablePrefixOnly,
     MessageId::CtxInspCacheTip,
+    MessageId::ToolFamilyRead,
+    MessageId::ToolFamilyPatch,
+    MessageId::ToolFamilyRun,
+    MessageId::ToolFamilyFind,
+    MessageId::ToolFamilyDelegate,
+    MessageId::ToolFamilyFanout,
+    MessageId::ToolFamilyRlm,
+    MessageId::ToolFamilyVerify,
+    MessageId::ToolFamilyThink,
+    MessageId::ToolFamilyGeneric,
 ];
 
 pub fn tr(locale: Locale, id: MessageId) -> &'static str {
@@ -1672,6 +1693,16 @@ fn english(id: MessageId) -> &'static str {
             "Tip: Stable prefix blocks are DeepSeek V4 prefix-cache eligible. \
             Volatile working-set changes break the cache only for the tail."
         }
+        MessageId::ToolFamilyRead => "read",
+        MessageId::ToolFamilyPatch => "patch",
+        MessageId::ToolFamilyRun => "run",
+        MessageId::ToolFamilyFind => "find",
+        MessageId::ToolFamilyDelegate => "delegate",
+        MessageId::ToolFamilyFanout => "fanout",
+        MessageId::ToolFamilyRlm => "rlm",
+        MessageId::ToolFamilyVerify => "verify",
+        MessageId::ToolFamilyThink => "think",
+        MessageId::ToolFamilyGeneric => "tool",
     }
 }
 
@@ -2238,6 +2269,16 @@ fn vietnamese(id: MessageId) -> Option<&'static str> {
         MessageId::CtxInspCacheTip => {
             "Gợi ý: Các khối ổn định đủ điều kiện cho bộ nhớ đệm tiền tố DeepSeek V4. Thay đổi vùng làm việc chỉ phá vỡ bộ nhớ đệm ở phần cuối."
         }
+        MessageId::ToolFamilyRead => "đọc",
+        MessageId::ToolFamilyPatch => "vá",
+        MessageId::ToolFamilyRun => "chạy",
+        MessageId::ToolFamilyFind => "tìm",
+        MessageId::ToolFamilyDelegate => "ủy quyền",
+        MessageId::ToolFamilyFanout => "fanout",
+        MessageId::ToolFamilyRlm => "rlm",
+        MessageId::ToolFamilyVerify => "xác minh",
+        MessageId::ToolFamilyThink => "suy nghĩ",
+        MessageId::ToolFamilyGeneric => "công cụ",
     })
 }
 
@@ -2358,6 +2399,16 @@ fn traditional_chinese(id: MessageId) -> Option<&'static str> {
         MessageId::StatusPickerActionNone => "無 ",
         MessageId::StatusPickerActionSave => "儲存 ",
         MessageId::StatusPickerActionCancel => "取消 ",
+        MessageId::ToolFamilyRead => "讀取",
+        MessageId::ToolFamilyPatch => "修補",
+        MessageId::ToolFamilyRun => "執行",
+        MessageId::ToolFamilyFind => "搜尋",
+        MessageId::ToolFamilyDelegate => "委派",
+        MessageId::ToolFamilyFanout => "扇出",
+        MessageId::ToolFamilyRlm => "rlm",
+        MessageId::ToolFamilyVerify => "驗證",
+        MessageId::ToolFamilyThink => "思考",
+        MessageId::ToolFamilyGeneric => "工具",
         other => chinese_simplified(other)?,
     })
 }
@@ -2883,6 +2934,16 @@ fn japanese(id: MessageId) -> Option<&'static str> {
         MessageId::CtxInspCacheTip => {
             "ヒント：安定プレフィックスブロックはDeepSeek V4プレフィックスキャッシュの対象です。揮発性ワーキングセットの変更は末尾のキャッシュのみを破壊します。"
         }
+        MessageId::ToolFamilyRead => "読込",
+        MessageId::ToolFamilyPatch => "パッチ",
+        MessageId::ToolFamilyRun => "実行",
+        MessageId::ToolFamilyFind => "検索",
+        MessageId::ToolFamilyDelegate => "委任",
+        MessageId::ToolFamilyFanout => "ファンアウト",
+        MessageId::ToolFamilyRlm => "rlm",
+        MessageId::ToolFamilyVerify => "検証",
+        MessageId::ToolFamilyThink => "思考",
+        MessageId::ToolFamilyGeneric => "ツール",
     })
 }
 
@@ -3343,6 +3404,16 @@ fn chinese_simplified(id: MessageId) -> Option<&'static str> {
         MessageId::CtxInspCacheTip => {
             "提示：稳定前缀区块符合 DeepSeek V4 前缀缓存条件。易变工作集的更改仅会破坏缓存尾部。"
         }
+        MessageId::ToolFamilyRead => "读取",
+        MessageId::ToolFamilyPatch => "修补",
+        MessageId::ToolFamilyRun => "运行",
+        MessageId::ToolFamilyFind => "搜索",
+        MessageId::ToolFamilyDelegate => "委派",
+        MessageId::ToolFamilyFanout => "扇出",
+        MessageId::ToolFamilyRlm => "rlm",
+        MessageId::ToolFamilyVerify => "验证",
+        MessageId::ToolFamilyThink => "思考",
+        MessageId::ToolFamilyGeneric => "工具",
     })
 }
 
@@ -3893,6 +3964,16 @@ fn portuguese_brazil(id: MessageId) -> Option<&'static str> {
         MessageId::CtxInspCacheTip => {
             "Dica: Blocos de prefixo estável são elegíveis para cache de prefixo DeepSeek V4. Alterações no conjunto de trabalho volátil quebram o cache apenas no final."
         }
+        MessageId::ToolFamilyRead => "ler",
+        MessageId::ToolFamilyPatch => "corrigir",
+        MessageId::ToolFamilyRun => "executar",
+        MessageId::ToolFamilyFind => "buscar",
+        MessageId::ToolFamilyDelegate => "delegar",
+        MessageId::ToolFamilyFanout => "fanout",
+        MessageId::ToolFamilyRlm => "rlm",
+        MessageId::ToolFamilyVerify => "verificar",
+        MessageId::ToolFamilyThink => "pensar",
+        MessageId::ToolFamilyGeneric => "ferramenta",
     })
 }
 
@@ -4453,6 +4534,16 @@ fn spanish_latin_america(id: MessageId) -> Option<&'static str> {
         MessageId::CtxInspCacheTip => {
             "Consejo: Los bloques de prefijo estable son elegibles para caché de prefijo DeepSeek V4. Los cambios en el conjunto de trabajo volátil solo rompen la caché al final."
         }
+        MessageId::ToolFamilyRead => "leer",
+        MessageId::ToolFamilyPatch => "parchear",
+        MessageId::ToolFamilyRun => "ejecutar",
+        MessageId::ToolFamilyFind => "buscar",
+        MessageId::ToolFamilyDelegate => "delegar",
+        MessageId::ToolFamilyFanout => "fanout",
+        MessageId::ToolFamilyRlm => "rlm",
+        MessageId::ToolFamilyVerify => "verificar",
+        MessageId::ToolFamilyThink => "pensar",
+        MessageId::ToolFamilyGeneric => "herramienta",
     })
 }
 

@@ -9504,7 +9504,10 @@ fn activity_cell_label(app: &App, cell_index: usize, cell: &HistoryCell) -> Stri
         HistoryCell::Error { .. } => "error".to_string(),
         HistoryCell::SubAgent(_) => "sub-agent".to_string(),
         HistoryCell::Tool(ToolCell::Generic(generic)) => {
-            crate::tui::widgets::tool_card::tool_activity_label_for_name(&generic.name)
+            crate::tui::widgets::tool_card::tool_activity_label_for_name(
+                &generic.name,
+                app.ui_locale,
+            )
         }
         HistoryCell::Tool(_) => {
             detail_target_label(app, cell_index).unwrap_or_else(|| "tool activity".to_string())
@@ -9939,9 +9942,12 @@ pub(crate) fn detail_target_label(app: &App, cell_index: usize) -> Option<String
             Some(format!("image {}", image.path.display()))
         }
         HistoryCell::Tool(ToolCell::WebSearch(search)) => Some(format!("search {}", search.query)),
-        HistoryCell::Tool(ToolCell::Generic(generic)) => {
-            Some(crate::tui::widgets::tool_card::tool_activity_label_for_name(&generic.name))
-        }
+        HistoryCell::Tool(ToolCell::Generic(generic)) => Some(
+            crate::tui::widgets::tool_card::tool_activity_label_for_name(
+                &generic.name,
+                app.ui_locale,
+            ),
+        ),
         HistoryCell::SubAgent(_) => Some("sub-agent".to_string()),
         _ => None,
     }

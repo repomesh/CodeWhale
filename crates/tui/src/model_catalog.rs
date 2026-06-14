@@ -18,12 +18,13 @@ use serde::{Deserialize, Serialize};
 const BUNDLED_CATALOG_JSON: &str = include_str!("../assets/model_catalog.bundled.json");
 const OPENROUTER_CACHE_FILE: &str = "openrouter.json";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum MetadataProvenance {
     ProviderApi,
     Bundled,
     UserOverride,
+    #[default]
     Unknown,
 }
 
@@ -36,12 +37,6 @@ impl MetadataProvenance {
             Self::UserOverride => "user_override",
             Self::Unknown => "unknown",
         }
-    }
-}
-
-impl Default for MetadataProvenance {
-    fn default() -> Self {
-        Self::Unknown
     }
 }
 

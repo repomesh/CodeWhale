@@ -211,10 +211,10 @@ pub fn lookup(model: &str) -> Option<ModelMetadata> {
     // Case-insensitive seed match (model ids are compared lowercased by the
     // legacy `models.rs` helpers, so honour that here too).
     let lowered = model.to_lowercase();
-    if lowered != model {
-        if let Some(meta) = registry().get(lowered.as_str()) {
-            return Some(meta.clone());
-        }
+    if lowered != model
+        && let Some(meta) = registry().get(lowered.as_str())
+    {
+        return Some(meta.clone());
     }
 
     // Not pre-seeded: defer to the existing heuristics. If they recognise the

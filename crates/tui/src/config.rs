@@ -2792,7 +2792,7 @@ impl Config {
             resolve_xiaomi_mimo_base_url(configured_base_url, api_key, mode)
         } else {
             configured_base_url
-                .or_else(|| env_base_url_override())
+                .or_else(env_base_url_override)
                 .unwrap_or_else(|| {
                     match provider {
                         ApiProvider::Deepseek => DEFAULT_DEEPSEEK_BASE_URL,

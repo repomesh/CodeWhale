@@ -916,6 +916,7 @@ impl ToolRegistryBuilder {
     /// when `tool_setup.rs` conditionally registers them on top of
     /// `with_agent_tools`.
     #[must_use]
+    #[allow(dead_code)] // legacy allow_shell convenience wrapper; used by tests, prod uses with_agent_tools_policy
     pub fn with_agent_tools(self, allow_shell: bool) -> Self {
         self.with_agent_tools_policy(crate::worker_profile::ShellPolicy::from_legacy_allow_shell(
             allow_shell,

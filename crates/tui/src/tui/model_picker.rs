@@ -505,7 +505,7 @@ fn picker_model_hint(id: &str) -> String {
 
 fn format_picker_context_window(tokens: u32) -> String {
     if tokens >= 1_000_000 {
-        if tokens % 1_000_000 == 0 {
+        if tokens.is_multiple_of(1_000_000) {
             format!("{}M", tokens / 1_000_000)
         } else {
             format!("{:.2}M", tokens as f64 / 1_000_000.0)

@@ -7562,10 +7562,10 @@ fn parse_queue_send_command(input: &str) -> Option<Result<usize, String>> {
 
 fn strip_queue_command_prefix(input: &str) -> Option<&str> {
     for prefix in ["/queue", "/queued"] {
-        if let Some(rest) = input.strip_prefix(prefix) {
-            if rest.is_empty() || rest.chars().next().is_some_and(char::is_whitespace) {
-                return Some(rest);
-            }
+        if let Some(rest) = input.strip_prefix(prefix)
+            && (rest.is_empty() || rest.chars().next().is_some_and(char::is_whitespace))
+        {
+            return Some(rest);
         }
     }
     None

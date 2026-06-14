@@ -379,7 +379,7 @@ pub fn swarm(_app: &mut App, arg: Option<&str>) -> CommandResult {
         Ok(parsed) => parsed,
         Err(message) => return CommandResult::error(message),
     };
-    if !matches!(task.as_deref().map(str::trim), Some(task) if !task.is_empty()) {
+    if !matches!(task.map(str::trim), Some(task) if !task.is_empty()) {
         return CommandResult::error(
             "Usage: /swarm [N] <task>\n\n\
              /swarm is currently gated. Use /goal for a persistent objective \

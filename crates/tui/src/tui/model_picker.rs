@@ -18,6 +18,7 @@ use ratatui::{
 };
 
 use crate::config::{ApiProvider, model_completion_names_for_provider};
+use crate::model_registry;
 use crate::palette;
 use crate::tui::app::{App, ReasoningEffort};
 use crate::tui::views::{ModalKind, ModalView, ViewAction, ViewEvent};
@@ -385,7 +386,7 @@ fn picker_model_rows_for_app(app: &App) -> Vec<ModelPickerRow> {
         &mut rows,
         "auto".to_string(),
         None,
-        picker_model_hint("auto").to_string(),
+        picker_model_hint("auto"),
     );
 
     for id in model_completion_names_for_provider(app.api_provider) {
@@ -394,7 +395,7 @@ fn picker_model_rows_for_app(app: &App) -> Vec<ModelPickerRow> {
                 &mut rows,
                 id.to_string(),
                 Some(app.api_provider),
-                picker_model_hint(id).to_string(),
+                picker_model_hint(id),
             );
         }
     }
@@ -462,25 +463,46 @@ fn push_model_row(
     rows.push(ModelPickerRow { id, provider, hint });
 }
 
-fn picker_model_hint(id: &str) -> &'static str {
-    match id {
-        "auto" => "select per turn",
-        "deepseek-v4-pro" | "deepseek/deepseek-v4-pro" | "deepseek-ai/deepseek-v4-pro" => {
-            "larger model"
+fn picker_model_hint(id: &str) -> String {
+    if id == "auto" {
+        return "select per turn".to_string();
+    }
+    let Some(metadata) = model_registry::lookup(id) else {
+        return "provider model".to_string();
+    };
+
+    let mut parts = Vec::new();
+    if let Some(context_window) = metadata.context_window {
+        parts.push(format!(
+            "{} ctx",
+            format_picker_context_window(context_window)
+        ));
+    }
+    if metadata.supports_reasoning {
+        parts.push("reasoning".to_string());
+    }
+    parts.push(if crate::pricing::has_pricing_for_model(id) {
+        "priced".to_string()
+    } else {
+        "price unknown".to_string()
+    });
+    parts.join(" · ")
+}
+
+fn format_picker_context_window(tokens: u32) -> String {
+    if tokens >= 1_000_000 {
+        if tokens % 1_000_000 == 0 {
+            format!("{}M", tokens / 1_000_000)
+        } else {
+            format!("{:.2}M", tokens as f64 / 1_000_000.0)
+                .trim_end_matches('0')
+                .trim_end_matches('.')
+                .to_string()
         }
-        "deepseek-v4-flash" | "deepseek/deepseek-v4-flash" | "deepseek-ai/deepseek-v4-flash" => {
-            "faster model"
-        }
-        "arcee-ai/trinity-large-thinking" => "large thinking",
-        "xiaomi/mimo-v2.5-pro" | "mimo-v2.5-pro" => "reasoning / coding",
-        "xiaomi/mimo-v2.5" | "mimo-v2.5" => "v2.5 omni",
-        "mimo-v2.5-tts" | "mimo-v2-tts" => "speech / TTS",
-        "mimo-v2.5-tts-voicedesign" => "voice design",
-        "mimo-v2.5-tts-voiceclone" => "voice clone",
-        "minimax/minimax-m3" => "1M multimodal",
-        "z-ai/glm-5.1" | "GLM-5.1" => "default coding",
-        "z-ai/glm-5.2" | "GLM-5.2" => "preview coding",
-        _ => "provider model",
+    } else if tokens >= 1_000 {
+        format!("{}K", tokens / 1_000)
+    } else {
+        tokens.to_string()
     }
 }
 
@@ -768,6 +790,23 @@ mod tests {
         app.model_ids_passthrough = false;
         app.provider_models.clear();
         (app, lock)
+    }
+
+    #[test]
+    fn model_picker_hint_uses_model_registry_metadata() {
+        let hint = picker_model_hint("minimax/minimax-m3");
+        assert!(
+            hint.contains("1M ctx"),
+            "hint should include registry context window: {hint}"
+        );
+        assert!(
+            hint.contains("reasoning"),
+            "hint should include registry reasoning support: {hint}"
+        );
+        assert!(
+            hint.contains("priced"),
+            "hint should include pricing availability: {hint}"
+        );
     }
 
     #[test]

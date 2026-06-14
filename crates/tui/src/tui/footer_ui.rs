@@ -619,15 +619,26 @@ pub(crate) fn render_footer_from(
 }
 
 pub(crate) fn footer_git_branch_spans(app: &App) -> Vec<Span<'static>> {
-    let Some(branch) = app
-        .workspace_context
-        .as_deref()
-        .and_then(workspace_context::branch_from_context)
-    else {
+    // Identity is sourced strictly from workspace/git detection (the cached
+    // "branch | status" context and the workspace path) — never from
+    // provider/model/config text (#3188). The cached context being `None`
+    // means "not a git repo", which we surface as an explicit non-repo state
+    // rather than an empty `Repo:` label.
+    //
+    // We render the full `Repo: <name> @ <branch>` identity and let the footer
+    // widget clip the whole bar to the real terminal width (matching the prior
+    // branch-only chip, which also emitted its full string). The width-aware
+    // `format_repo_identity` truncation policy is exercised in unit tests with
+    // explicit widths; here we pass an effectively unbounded budget so a normal
+    // branch name is never dropped on a wide terminal.
+    let identity =
+        workspace_context::identity_from_context(&app.workspace, app.workspace_context.as_deref());
+    let label = workspace_context::format_repo_identity(&identity, usize::MAX);
+    if label.is_empty() {
         return Vec::new();
-    };
+    }
     vec![Span::styled(
-        branch.to_string(),
+        label,
         Style::default().fg(app.ui_theme.text_muted),
     )]
 }

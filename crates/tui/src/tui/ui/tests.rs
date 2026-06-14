@@ -8839,7 +8839,18 @@ fn render_footer_from_git_branch_item_renders_workspace_branch() {
     crate::tui::workspace_context::refresh_if_needed(&mut app, Instant::now(), true);
 
     let props = render_footer_from(&app, &[crate::config::StatusItem::GitBranch], None);
-    assert_eq!(spans_text(&props.cache), "feature/statusline");
+    // #3188: the chip now leads with the workspace repo identity, then the
+    // branch. The temp repo basename is random, so assert the stable shape:
+    // a `Repo:` prefix joined to the actual branch via " @ ".
+    let chip = spans_text(&props.cache);
+    assert!(
+        chip.starts_with("Repo: "),
+        "chip should name the repo: {chip:?}"
+    );
+    assert!(
+        chip.ends_with(" @ feature/statusline"),
+        "chip should show the current branch: {chip:?}"
+    );
 }
 
 // ── Balance footer chip tests ─────────────────────────────────────
@@ -8985,9 +8996,14 @@ fn default_footer_renders_workspace_branch_when_available() {
     crate::tui::workspace_context::refresh_if_needed(&mut app, Instant::now(), true);
 
     let props = render_footer_from(&app, &crate::config::StatusItem::default_footer(), None);
+    let cache = spans_text(&props.cache);
     assert!(
-        spans_text(&props.cache).contains("feature/default-branch-chip"),
-        "default footer should include the current git branch"
+        cache.contains("feature/default-branch-chip"),
+        "default footer should include the current git branch: {cache:?}"
+    );
+    assert!(
+        cache.contains("Repo: "),
+        "default footer should name the repo identity (#3188): {cache:?}"
     );
 }
 

@@ -34,18 +34,22 @@ for Claude-based agents working in this repository.
   inspect diffs, comments, check results, and release-branch conflicts before
   landing.
 
-## v0.8.59 Release Work
+## v0.8.62 Release Work
 
-- Base release triage on `codex/v0.8.59-release-ready` unless Hunter gives a
-  newer branch.
+- The active branch is `hunter/0.8.62-glm-subagents` (worktree
+  `CodeWhale-0.8.62-glm-subagents`). 0.8.61 has shipped; do all new work here,
+  never on `main`.
+- Base release triage on the GitHub `v0.8.62` milestone
+  (`gh issue list --repo Hmbown/CodeWhale --milestone "v0.8.62" --state open`)
+  unless Hunter gives a newer branch/milestone.
 - Work the queue in this order: release blockers, recently approved PRs, clean
   PRs with small scope, blocked PRs with obvious fixes, dirty PRs that can be
   harvested safely, then larger architecture issues.
 - Prefer batching PR conflict discovery on scratch branches, then harvesting
   reviewed, credited, tested slices back into the release branch.
-- Before claiming an issue is done, verify whether the release branch already
-  contains equivalent work. If it does, prepare the GitHub note/closure path
-  instead of reimplementing it.
-- For the current v0.8.59 queue, start with
-  `docs/V0_8_59_RELEASE_TRIAGE.md`, then refresh live GitHub state before
-  taking action.
+- Before claiming an issue is done, verify whether the branch already contains
+  equivalent work. If it does, prepare the GitHub note/closure path instead of
+  reimplementing it.
+- See `AGENTS.md` → "Where to work right now" for build/test commands, known
+  suite papercuts, and the removed-machinery guardrails (agent-only surface,
+  no lifecycle/coherence systems).

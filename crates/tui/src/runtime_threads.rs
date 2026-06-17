@@ -75,6 +75,7 @@ fn sort_turn_items_by_start(items: &mut [TurnItemRecord]) {
 /// session should still fail closed rather than silently mis-replay.
 const CURRENT_RUNTIME_SCHEMA_VERSION: u32 = 2;
 const RUNTIME_RESTART_REASON: &str = "Interrupted by process restart";
+const EMPTY_TURN_REASON: &str = "Turn completed without engine output";
 const APPROVAL_DECISION_TIMEOUT: Duration = Duration::from_secs(300);
 
 const fn default_runtime_schema_version() -> u32 {
@@ -2251,6 +2252,7 @@ impl RuntimeThreadManager {
         let mut turn_usage: Option<Usage> = None;
         let mut turn_status = RuntimeTurnStatus::Completed;
         let mut turn_error: Option<String> = None;
+        let mut saw_engine_activity = false;
 
         loop {
             let event = {
@@ -2267,6 +2269,13 @@ impl RuntimeThreadManager {
                 }
                 break;
             };
+
+            if !matches!(
+                &event,
+                EngineEvent::TurnStarted { .. } | EngineEvent::TurnComplete { .. }
+            ) {
+                saw_engine_activity = true;
+            }
 
             match event {
                 EngineEvent::TurnStarted { .. } => {
@@ -2942,6 +2951,34 @@ impl RuntimeThreadManager {
                 } else {
                     "item.completed"
                 },
+                json!({ "item": item }),
+            )
+            .await?;
+        }
+
+        if turn_status == RuntimeTurnStatus::Completed && !saw_engine_activity {
+            turn_status = RuntimeTurnStatus::Failed;
+            turn_error = Some(EMPTY_TURN_REASON.to_string());
+            let item = TurnItemRecord {
+                schema_version: CURRENT_RUNTIME_SCHEMA_VERSION,
+                id: format!("item_{}", &Uuid::new_v4().to_string()[..8]),
+                turn_id: turn_id.clone(),
+                kind: TurnItemKind::Error,
+                status: TurnItemLifecycleStatus::Failed,
+                summary: EMPTY_TURN_REASON.to_string(),
+                detail: Some(EMPTY_TURN_REASON.to_string()),
+                metadata: None,
+                artifact_refs: Vec::new(),
+                started_at: Some(Utc::now()),
+                ended_at: Some(Utc::now()),
+            };
+            self.store.save_item(&item)?;
+            self.attach_item_to_turn(&turn_id, &item.id)?;
+            self.emit_event(
+                &thread_id,
+                Some(&turn_id),
+                Some(&item.id),
+                "item.failed",
                 json!({ "item": item }),
             )
             .await?;
@@ -3727,6 +3764,92 @@ mod tests {
             events.iter().any(|ev| ev.event == "turn.completed"),
             "expected turn.completed event after restart"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn completed_turn_without_engine_output_fails() -> Result<()> {
+        let manager = test_manager(test_runtime_dir())?;
+        let thread = manager
+            .create_thread(CreateThreadRequest {
+                model: None,
+                workspace: None,
+                mode: None,
+                allow_shell: None,
+                trust_mode: None,
+                auto_approve: None,
+                archived: false,
+                system_prompt: None,
+                task_id: None,
+                ..Default::default()
+            })
+            .await?;
+
+        let harness = install_mock_engine(&manager, &thread.id).await;
+        let mut rx_op = harness.rx_op;
+        let tx_event = harness.tx_event;
+        tokio::spawn(async move {
+            if matches!(rx_op.recv().await, Some(Op::SendMessage { .. })) {
+                let _ = tx_event
+                    .send(EngineEvent::TurnStarted {
+                        turn_id: "engine_empty_turn".to_string(),
+                    })
+                    .await;
+                let _ = tx_event
+                    .send(EngineEvent::TurnComplete {
+                        usage: Usage {
+                            input_tokens: 10,
+                            output_tokens: 0,
+                            ..Usage::default()
+                        },
+                        status: TurnOutcomeStatus::Completed,
+                        error: None,
+                        tool_catalog: None,
+                        base_url: None,
+                    })
+                    .await;
+            }
+        });
+
+        let turn = manager
+            .start_turn(
+                &thread.id,
+                StartTurnRequest {
+                    prompt: "empty turn".to_string(),
+                    input_summary: None,
+                    model: None,
+                    mode: None,
+                    allow_shell: None,
+                    trust_mode: None,
+                    auto_approve: None,
+                    ..Default::default()
+                },
+            )
+            .await?;
+
+        let failed = wait_for_terminal_turn(&manager, &turn.id, Duration::from_secs(2)).await?;
+        assert_eq!(failed.status, RuntimeTurnStatus::Failed);
+        assert_eq!(failed.error.as_deref(), Some(EMPTY_TURN_REASON));
+
+        let events = manager.events_since(&thread.id, None)?;
+        assert!(events.iter().any(|ev| {
+            ev.event == "item.failed"
+                && ev
+                    .payload
+                    .get("item")
+                    .and_then(|item| item.get("kind"))
+                    .and_then(Value::as_str)
+                    == Some("error")
+        }));
+        assert!(events.iter().any(|ev| {
+            ev.event == "turn.completed"
+                && ev
+                    .payload
+                    .get("turn")
+                    .and_then(|turn| turn.get("status"))
+                    .and_then(Value::as_str)
+                    == Some("failed")
+        }));
         Ok(())
     }
 

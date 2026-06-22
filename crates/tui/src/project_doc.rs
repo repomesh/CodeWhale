@@ -178,7 +178,7 @@ fn open_regular_file(path: &Path) -> io::Result<fs::File> {
     fs::File::open(path)
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use tempfile::tempdir;

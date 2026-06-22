@@ -862,7 +862,8 @@ impl HttpTransport {
             .and_then(|v| v.to_str().ok())
             && transport.session_id.as_deref() != Some(sid)
         {
-            tracing::debug!(target: "mcp", session_id = %sid, "captured MCP session ID via GET preflight");
+            let session_ref = crate::utils::redacted_identifier_for_log(sid);
+            tracing::debug!(target: "mcp", session = %session_ref, "captured MCP session ID via GET preflight");
             transport.session_id = Some(sid.to_string());
         }
 
@@ -962,7 +963,8 @@ impl StreamableHttpTransport {
             .and_then(|v| v.to_str().ok())
             && self.session_id.as_deref() != Some(sid)
         {
-            tracing::debug!(target: "mcp", session_id = %sid, "captured MCP session ID");
+            let session_ref = crate::utils::redacted_identifier_for_log(sid);
+            tracing::debug!(target: "mcp", session = %session_ref, "captured MCP session ID");
             self.session_id = Some(sid.to_string());
         }
         if status == StatusCode::ACCEPTED || status == StatusCode::NO_CONTENT {

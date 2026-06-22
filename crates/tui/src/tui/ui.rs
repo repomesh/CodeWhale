@@ -8870,20 +8870,22 @@ async fn handle_view_events(
                         if !recovered {
                             app.status_message = Some(format!(
                                 "Session loaded (ID: {})",
-                                &session_id[..8.min(session_id.len())]
+                                crate::session_manager::truncate_id(&session_id)
                             ));
                         }
                     }
                     Err(err) => {
-                        app.status_message =
-                            Some(format!("Failed to load session {session_id}: {err}"));
+                        app.status_message = Some(format!(
+                            "Failed to load session {}: {err}",
+                            crate::session_manager::truncate_id(&session_id)
+                        ));
                     }
                 }
             }
             ViewEvent::SessionDeleted { session_id, title } => {
                 app.status_message = Some(format!(
                     "Deleted session {} ({})",
-                    &session_id[..8.min(session_id.len())],
+                    crate::session_manager::truncate_id(&session_id),
                     title
                 ));
             }

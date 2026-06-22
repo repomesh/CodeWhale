@@ -947,7 +947,13 @@ async fn resume_session_thread(
         .set_thread_session_id(&thread.id, &id)
         .await
     {
-        tracing::warn!("Failed to link session {id} to thread {}: {e}", thread.id);
+        let session_ref = crate::utils::redacted_identifier_for_log(&id);
+        tracing::warn!(
+            session = %session_ref,
+            thread_id = %thread.id,
+            error = %e,
+            "Failed to link session to thread"
+        );
     }
 
     let summary = format!(
@@ -1031,9 +1037,12 @@ async fn create_session_from_thread(
         .set_thread_session_id(&detail.thread.id, &session_id)
         .await
     {
+        let session_ref = crate::utils::redacted_identifier_for_log(&session_id);
         tracing::warn!(
-            "Failed to link session {session_id} to thread {}: {e}",
-            detail.thread.id
+            session = %session_ref,
+            thread_id = %detail.thread.id,
+            error = %e,
+            "Failed to link session to thread"
         );
     }
 
@@ -1313,7 +1322,13 @@ async fn save_current_session(
         .set_thread_session_id(&thread_id, &session_id)
         .await
     {
-        tracing::warn!("Failed to link session {session_id} to thread {thread_id}: {e}");
+        let session_ref = crate::utils::redacted_identifier_for_log(&session_id);
+        tracing::warn!(
+            session = %session_ref,
+            thread_id = %thread_id,
+            error = %e,
+            "Failed to link session to thread"
+        );
     }
 
     Ok(Json(SaveSessionResponse {

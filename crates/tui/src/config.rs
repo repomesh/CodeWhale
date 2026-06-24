@@ -289,6 +289,18 @@ impl ApiProvider {
     pub fn from_kind(kind: codewhale_config::ProviderKind) -> Self {
         Self::FROM_KIND_LOOKUP[kind as usize]
     }
+
+    /// Whether this provider is a self-hosted / local runtime.
+    ///
+    /// These run without hosted authentication and keep traffic on the user's
+    /// own infrastructure, so they carry a local/private posture. Used by the
+    /// fallback chain to avoid silently routing a local/private primary out to
+    /// a cloud provider (#2574) and by the `/provider` dashboard's self-hosted
+    /// hint (#3083).
+    #[must_use]
+    pub fn is_self_hosted(self) -> bool {
+        matches!(self, Self::Sglang | Self::Vllm | Self::Ollama)
+    }
 }
 
 fn normalize_subagent_provider_key(value: &str) -> String {
@@ -5962,10 +5974,7 @@ pub fn has_api_key_for(config: &Config, provider: ApiProvider) -> bool {
     }
 
     // Self-hosted providers typically run without authentication.
-    if matches!(
-        provider,
-        ApiProvider::Sglang | ApiProvider::Vllm | ApiProvider::Ollama
-    ) {
+    if provider.is_self_hosted() {
         return true;
     }
 

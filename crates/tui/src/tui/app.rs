@@ -5669,9 +5669,21 @@ impl App {
     /// Note: auth-rejection (401) failures never reach this path; the caller
     /// excludes them from fallback so a bad key does not silently rotate
     /// providers (see `apply_engine_error_to_app`).
+    ///
+    /// Local/private policy (#2574): when the chain's primary provider is a
+    /// self-hosted / local runtime, cloud candidates are skipped with a clear
+    /// note so a local/private route never silently falls back out to a hosted
+    /// provider. Self-hosted siblings remain eligible.
     pub fn advance_fallback(&mut self, reason: impl Into<String>) -> Option<ApiProvider> {
         let reason = reason.into();
         self.provider_chain.as_ref()?;
+
+        let origin_is_local = self
+            .provider_chain
+            .as_ref()
+            .and_then(|chain| chain.providers().first().copied())
+            .map(ApiProvider::from_kind)
+            .is_some_and(ApiProvider::is_self_hosted);
 
         let mut skip_notes: Vec<String> = Vec::new();
         let mut chosen: Option<ApiProvider> = None;
@@ -5681,6 +5693,13 @@ impl App {
             .and_then(ProviderChain::advance)
         {
             let candidate = ApiProvider::from_kind(next_kind);
+            if origin_is_local && !candidate.is_self_hosted() {
+                skip_notes.push(format!(
+                    "skipped {}: local/private policy (no local->cloud fallback)",
+                    candidate.as_str()
+                ));
+                continue;
+            }
             if self.fallback_provider_is_ready(candidate) {
                 chosen = Some(candidate);
                 break;

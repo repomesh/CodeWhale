@@ -3007,6 +3007,7 @@ fn app_with_fallback_chain(
             ..Default::default()
         };
         match provider {
+            ApiProvider::Deepseek => providers.deepseek = entry,
             ApiProvider::Openai => providers.openai = entry,
             ApiProvider::Openrouter => providers.openrouter = entry,
             ApiProvider::Together => providers.together = entry,
@@ -3123,4 +3124,57 @@ fn advance_fallback_all_unready_exhausts_with_clear_reason() {
             && reason.contains("skipped together: needs auth"),
         "reason should note every skipped provider: {reason}"
     );
+}
+
+#[test]
+fn advance_fallback_local_primary_does_not_fall_back_to_cloud() {
+    let _lock = lock_test_env();
+    let _openai = EnvVarGuard::remove("OPENAI_API_KEY");
+    let _deepseek = EnvVarGuard::remove("DEEPSEEK_API_KEY");
+
+    // Local primary (Ollama) -> cloud fallback (DeepSeek, fully keyed). The
+    // cloud entry is policy-blocked even though it is otherwise ready, so the
+    // chain exhausts rather than leaking a local/private route out to cloud.
+    let mut app = app_with_fallback_chain(
+        ApiProvider::Ollama,
+        &[codewhale_config::ProviderKind::Deepseek],
+        &[ApiProvider::Deepseek],
+    );
+
+    let next = app.advance_fallback("local runtime unavailable");
+    assert_eq!(next, None, "local->cloud fallback must be blocked");
+    assert_eq!(app.api_provider, ApiProvider::Ollama);
+
+    let reason = app.last_fallback_reason.as_deref().unwrap_or_default();
+    assert!(
+        reason.contains("local/private policy"),
+        "block reason must be visible and specific: {reason}"
+    );
+    assert!(
+        !reason.contains("needs auth"),
+        "the block is policy, not missing auth: {reason}"
+    );
+}
+
+#[test]
+fn advance_fallback_local_primary_may_fall_back_to_local_sibling() {
+    let _lock = lock_test_env();
+
+    // Local primary (Ollama) -> local sibling (vLLM). Both are self-hosted, so
+    // the local/private posture is preserved and the fallback is allowed.
+    let mut app = app_with_fallback_chain(
+        ApiProvider::Ollama,
+        &[codewhale_config::ProviderKind::Vllm],
+        &[],
+    );
+
+    let next = app.advance_fallback("local runtime unavailable");
+    assert_eq!(
+        next,
+        Some(ApiProvider::Vllm),
+        "local->local fallback stays within the private posture"
+    );
+    assert_eq!(app.api_provider, ApiProvider::Vllm);
+    let reason = app.last_fallback_reason.as_deref().unwrap_or_default();
+    assert!(reason.contains("Fell back to vllm"), "{reason}");
 }

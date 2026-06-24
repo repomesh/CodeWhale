@@ -9,7 +9,7 @@ mod provider_kind;
 pub mod route;
 pub use harness::{
     HarnessCompactionStrategy, HarnessPosture, HarnessPostureKind, HarnessProfile,
-    HarnessSafetyPosture, HarnessToolSurface,
+    HarnessSafetyPosture, HarnessToolSurface, built_in_harness_profiles,
 };
 pub(crate) use provider_defaults::*;
 pub use provider_kind::ProviderKind;
@@ -594,95 +594,6 @@ impl ConfigToml {
     pub fn resolve_hotbar_bindings(&self, known_action_ids: &[&str]) -> HotbarConfigResolution {
         resolve_hotbar_bindings(self.hotbar.as_deref(), known_action_ids)
     }
-}
-
-/// Built-in profile seeds for common provider/model families.
-///
-/// User-configured profiles are always checked first; these seeds only provide
-/// a stable resolver result when config has no narrower match.
-#[must_use]
-pub fn built_in_harness_profiles() -> &'static [HarnessProfile] {
-    static PROFILES: OnceLock<Vec<HarnessProfile>> = OnceLock::new();
-    PROFILES.get_or_init(|| {
-        vec![
-            HarnessProfile {
-                provider_route: "deepseek".to_string(),
-                model_pattern: "deepseek-v4*".to_string(),
-                posture: HarnessPosture::cache_heavy(),
-            },
-            HarnessProfile {
-                provider_route: "xiaomi-mimo".to_string(),
-                model_pattern: "mimo-v2.5*".to_string(),
-                posture: HarnessPosture::cache_heavy(),
-            },
-            HarnessProfile {
-                provider_route: "arcee".to_string(),
-                model_pattern: "trinity-large-thinking".to_string(),
-                posture: HarnessPosture::cache_heavy(),
-            },
-            HarnessProfile {
-                provider_route: "huggingface".to_string(),
-                model_pattern: "*".to_string(),
-                posture: HarnessPosture::lean(),
-            },
-            HarnessProfile {
-                provider_route: "sglang".to_string(),
-                model_pattern: "*".to_string(),
-                posture: HarnessPosture::lean(),
-            },
-            HarnessProfile {
-                provider_route: "vllm".to_string(),
-                model_pattern: "*".to_string(),
-                posture: HarnessPosture::lean(),
-            },
-            HarnessProfile {
-                provider_route: "ollama".to_string(),
-                model_pattern: "*".to_string(),
-                posture: HarnessPosture::lean(),
-            },
-        ]
-    })
-}
-
-fn provider_routes_equal(expected: &str, actual: &str) -> bool {
-    match (ProviderKind::parse(expected), ProviderKind::parse(actual)) {
-        (Some(expected), Some(actual)) => expected == actual,
-        _ => expected.trim().eq_ignore_ascii_case(actual.trim()),
-    }
-}
-
-fn wildcard_pattern_matches(pattern: &str, value: &str) -> bool {
-    wildcard_chars_match(
-        &pattern.chars().collect::<Vec<_>>(),
-        &value.chars().collect::<Vec<_>>(),
-    )
-}
-
-fn wildcard_chars_match(pattern: &[char], value: &[char]) -> bool {
-    let (mut pattern_idx, mut value_idx) = (0, 0);
-    let mut star_idx: Option<usize> = None;
-    let mut star_value_idx = 0;
-
-    while value_idx < value.len() {
-        if pattern_idx < pattern.len()
-            && (pattern[pattern_idx] == '?' || pattern[pattern_idx] == value[value_idx])
-        {
-            pattern_idx += 1;
-            value_idx += 1;
-        } else if pattern_idx < pattern.len() && pattern[pattern_idx] == '*' {
-            star_idx = Some(pattern_idx);
-            pattern_idx += 1;
-            star_value_idx = value_idx;
-        } else if let Some(star) = star_idx {
-            pattern_idx = star + 1;
-            star_value_idx += 1;
-            value_idx = star_value_idx;
-        } else {
-            return false;
-        }
-    }
-
-    pattern[pattern_idx..].iter().all(|ch| *ch == '*')
 }
 
 /// Ordered primary-plus-fallback provider list for future provider routing.

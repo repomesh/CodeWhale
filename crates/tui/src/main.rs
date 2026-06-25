@@ -415,10 +415,7 @@ fn resolve_exec_allowed_tools(
         return Some(normalize_exec_tool_names(tools));
     }
 
-    match env_tool_surface {
-        Some(ExecToolSurface::ShellOnly) => Some(shell_only_exec_allowed_tools()),
-        None => None,
-    }
+    env_tool_surface.map(|ExecToolSurface::ShellOnly| shell_only_exec_allowed_tools())
 }
 
 #[derive(Args, Debug, Clone)]

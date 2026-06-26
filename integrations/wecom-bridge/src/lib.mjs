@@ -79,6 +79,24 @@ export function stripGroupPrefix(text, { chatType, requirePrefix, prefix }) {
   });
 }
 
+/** Check if text is a natural-language approval response (Chinese or English). */
+export function isApprovalResponse(text) {
+  const t = String(text || "").trim().toLowerCase();
+  // Single-word approvals
+  if (["允许", "可以", "好", "同意", "批准", "yes", "ok", "y", "approve", "allow"].includes(t)) return true;
+  // Two-char approvals
+  if (["好的", "可以", "没问题", "批准了", "同意"].includes(t)) return true;
+  return false;
+}
+
+/** Check if text is a natural-language deny response. */
+export function isDenyResponse(text) {
+  const t = String(text || "").trim().toLowerCase();
+  if (["拒绝", "不行", "不要", "no", "n", "deny", "reject", "取消", "stop", "否"].includes(t)) return true;
+  if (["不可以", "不同意", "不要执行"].includes(t)) return true;
+  return false;
+}
+
 export function commandAction(command) {
   return coreCommandAction(command);
 }

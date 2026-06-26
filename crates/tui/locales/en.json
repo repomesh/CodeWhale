@@ -93,7 +93,7 @@
     "CmdLogoutDescription": "Clear API key and return to setup",
     "CmdMcpDescription": "Open or manage MCP servers",
     "CmdPluginDescription": "List discovered plugin tools or show details for one",
-    "CmdPluginNoneFound": "No plugin tools discovered in {dir,",
+    "CmdPluginNoneFound": "No plugin tools discovered in {dir}",
     "CmdPluginNotFound": "Plugin '{name}' not found",
     "CmdPluginListHeader": "Plugin tools ({count}):",
     "CmdPluginDetailDescription": "Description: {description}",

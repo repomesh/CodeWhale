@@ -1788,8 +1788,10 @@ fn hotbar_setup_save_error_leaves_live_config_and_file_unchanged() {
         action: "mode.plan".to_string(),
         label: None,
     }];
-    let mut config = Config::default();
-    config.hotbar = Some(original_bindings.clone());
+    let mut config = Config {
+        hotbar: Some(original_bindings.clone()),
+        ..Default::default()
+    };
     let attempted_bindings = vec![codewhale_config::HotbarBindingToml {
         slot: 1,
         action: "mode.agent".to_string(),

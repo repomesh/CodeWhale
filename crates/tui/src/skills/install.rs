@@ -315,9 +315,7 @@ pub async fn install_with_registry(
 
     // Compute a checksum before unpacking so [`update`] can detect upstream
     // no-op changes without redoing the extract.
-    let mut hasher = Sha256::new();
-    hasher.update(&bytes);
-    let checksum = format!("{:x}", hasher.finalize());
+    let checksum = sha256_hex(&bytes);
 
     let staged = stage_tarball(&bytes, skills_dir, max_size)?;
 
@@ -434,9 +432,7 @@ pub async fn update_with_registry(
         DownloadOutcome::Denied(host) => return Ok(UpdateResult::NetworkDenied(host)),
     };
 
-    let mut hasher = Sha256::new();
-    hasher.update(&bytes);
-    let checksum = format!("{:x}", hasher.finalize());
+    let checksum = sha256_hex(&bytes);
     if checksum == marker.checksum {
         return Ok(UpdateResult::NoChange);
     }
@@ -746,9 +742,7 @@ async fn sync_one_skill(
         }
 
         // Compute SHA-256 of the downloaded bytes.
-        let mut hasher = Sha256::new();
-        hasher.update(&bytes);
-        let sha256 = format!("{:x}", hasher.finalize());
+        let sha256 = sha256_hex(&bytes);
 
         // Short-circuit: if the hash matches the cached one, we're fresh even
         // without a 304 (some CDNs strip ETags on redirects).
@@ -1487,6 +1481,20 @@ fn source_spec_string(source: &InstallSource) -> String {
         InstallSource::DirectUrl(url) => url.clone(),
         InstallSource::Registry(name) => name.clone(),
     }
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    hex_bytes(Sha256::digest(bytes))
+}
+
+fn hex_bytes(bytes: impl AsRef<[u8]>) -> String {
+    let bytes = bytes.as_ref();
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        use std::fmt::Write as _;
+        let _ = write!(&mut out, "{byte:02x}");
+    }
+    out
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

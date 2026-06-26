@@ -751,7 +751,17 @@ fn download_url_once(url: &str, proxy: Option<&Proxy>) -> Result<(reqwest::Statu
 fn sha256_hex(data: &[u8]) -> String {
     use sha2::Digest;
     let hash = sha2::Sha256::digest(data);
-    format!("{hash:x}")
+    hex_bytes(hash)
+}
+
+fn hex_bytes(bytes: impl AsRef<[u8]>) -> String {
+    let bytes = bytes.as_ref();
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        use std::fmt::Write as _;
+        let _ = write!(&mut out, "{byte:02x}");
+    }
+    out
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

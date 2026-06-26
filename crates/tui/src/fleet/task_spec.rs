@@ -11,7 +11,6 @@ use codewhale_protocol::fleet::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 
 use super::ledger::FleetLedger;
 
@@ -215,11 +214,10 @@ pub fn write_fleet_artifact_ref(
     }
     std::fs::write(&abs_path, contents)
         .with_context(|| format!("writing fleet artifact {}", abs_path.display()))?;
-    let digest = Sha256::digest(contents);
     Ok(FleetArtifactRef {
         kind,
         path: rel_path,
-        checksum: Some(format!("sha256:{digest:x}")),
+        checksum: Some(format!("sha256:{}", crate::hashing::sha256_hex(contents))),
         mime_type: mime_type.map(str::to_string),
         size_bytes: Some(contents.len() as u64),
     })

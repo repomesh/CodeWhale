@@ -156,6 +156,42 @@ enum GateStatus {
     Skipped,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum VerifierVerdict {
+    Pass,
+    Partial,
+    Fail,
+}
+
+impl VerifierVerdict {
+    fn from_counts(gate_count: usize, failed: usize, skipped: usize) -> Self {
+        if failed > 0 {
+            Self::Fail
+        } else if skipped > 0 || gate_count == 0 {
+            Self::Partial
+        } else {
+            Self::Pass
+        }
+    }
+
+    fn hunt_verdict(self) -> &'static str {
+        match self {
+            Self::Pass => "hunted",
+            Self::Partial => "wounded",
+            Self::Fail => "escaped",
+        }
+    }
+
+    fn goal_status(self) -> &'static str {
+        match self {
+            Self::Pass => "complete",
+            Self::Partial => "paused",
+            Self::Fail => "blocked",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct RunVerifiersOutput {
     success: bool,
@@ -166,6 +202,9 @@ struct RunVerifiersOutput {
     passed: usize,
     failed: usize,
     skipped: usize,
+    verifier_verdict: VerifierVerdict,
+    hunt_verdict: String,
+    goal_status: String,
     summary: String,
     gates: Vec<GateResult>,
 }
@@ -306,6 +345,7 @@ impl ToolSpec for RunVerifiersTool {
             &input.commands,
         )?;
         if gates.is_empty() {
+            let verifier_verdict = VerifierVerdict::from_counts(0, 0, 0);
             let output = RunVerifiersOutput {
                 success: false,
                 profile: profile.as_str().to_string(),
@@ -315,6 +355,9 @@ impl ToolSpec for RunVerifiersTool {
                 passed: 0,
                 failed: 0,
                 skipped: 0,
+                verifier_verdict,
+                hunt_verdict: verifier_verdict.hunt_verdict().to_string(),
+                goal_status: verifier_verdict.goal_status().to_string(),
                 summary: "No verifier gates were detected. Provide custom commands or choose a profile that matches this workspace.".to_string(),
                 gates: Vec::new(),
             };
@@ -366,6 +409,7 @@ impl ToolSpec for RunVerifiersTool {
             .filter(|result| result.status == GateStatus::Skipped)
             .count();
         let success = failed == 0 && skipped == 0;
+        let verifier_verdict = VerifierVerdict::from_counts(results.len(), failed, skipped);
         let summary = if success {
             format!("All {passed} verifier gates passed.")
         } else {
@@ -381,6 +425,9 @@ impl ToolSpec for RunVerifiersTool {
             passed,
             failed,
             skipped,
+            verifier_verdict,
+            hunt_verdict: verifier_verdict.hunt_verdict().to_string(),
+            goal_status: verifier_verdict.goal_status().to_string(),
             summary,
             gates: results,
         };
@@ -1268,6 +1315,66 @@ mod tests {
             "stdout should include rustc version: {:?}",
             parsed.gates[0].stdout
         );
+    }
+
+    #[tokio::test]
+    async fn run_verifiers_emits_hunt_verdict_mapping() {
+        let tmp = tempdir().expect("tempdir");
+        let ctx = ToolContext::new(tmp.path());
+        let tool = RunVerifiersTool;
+
+        let partial = tool
+            .execute(json!({"profile": "auto"}), &ctx)
+            .await
+            .expect("execute partial verifier");
+        assert_hunt_mapping(&partial.content, "partial", "wounded", "paused");
+
+        if !crate::dependencies::RustC::available() {
+            return;
+        }
+
+        let pass = tool
+            .execute(
+                json!({
+                    "profile": "auto",
+                    "commands": [
+                        {
+                            "name": "rustc-version",
+                            "program": crate::dependencies::RustC::resolve().expect("rustc"),
+                            "args": ["--version"]
+                        }
+                    ]
+                }),
+                &ctx,
+            )
+            .await
+            .expect("execute passing verifier");
+        assert_hunt_mapping(&pass.content, "pass", "hunted", "complete");
+
+        let fail = tool
+            .execute(
+                json!({
+                    "profile": "auto",
+                    "commands": [
+                        {
+                            "name": "rustc-bad-flag",
+                            "program": crate::dependencies::RustC::resolve().expect("rustc"),
+                            "args": ["--definitely-not-a-rustc-flag"]
+                        }
+                    ]
+                }),
+                &ctx,
+            )
+            .await
+            .expect("execute failing verifier");
+        assert_hunt_mapping(&fail.content, "fail", "escaped", "blocked");
+    }
+
+    fn assert_hunt_mapping(content: &str, verifier: &str, hunt: &str, goal: &str) {
+        let parsed: Value = serde_json::from_str(content).expect("verifier output json");
+        assert_eq!(parsed["verifier_verdict"], verifier, "{content}");
+        assert_eq!(parsed["hunt_verdict"], hunt, "{content}");
+        assert_eq!(parsed["goal_status"], goal, "{content}");
     }
 
     #[tokio::test]

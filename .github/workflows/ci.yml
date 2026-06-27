@@ -104,23 +104,26 @@ jobs:
   lint:
     name: Lint
     needs: changes
-    if: needs.changes.outputs.heavy == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@master
+        if: needs.changes.outputs.heavy == 'true'
         with:
           toolchain: stable
           components: rustfmt, clippy
       - uses: mozilla-actions/sccache-action@v0.0.10
+        if: needs.changes.outputs.heavy == 'true'
       - name: Enable sccache
+        if: needs.changes.outputs.heavy == 'true'
         shell: bash
         run: |
           echo "SCCACHE_GHA_ENABLED=true" >> "${GITHUB_ENV}"
           echo "RUSTC_WRAPPER=sccache" >> "${GITHUB_ENV}"
       - name: Install Linux system dependencies
+        if: needs.changes.outputs.heavy == 'true'
         run: |
           for i in 1 2 3 4 5; do
             sudo apt-get update && break
@@ -129,11 +132,14 @@ jobs:
           done
           sudo apt-get install -y libdbus-1-dev pkg-config
       - uses: Swatinem/rust-cache@v2
+        if: needs.changes.outputs.heavy == 'true'
         with:
           cache-bin: false
       - name: Check formatting
+        if: needs.changes.outputs.heavy == 'true'
         run: cargo fmt --all -- --check
       - name: Run clippy
+        if: needs.changes.outputs.heavy == 'true'
         run: |
           cargo clippy --workspace --all-features --locked -- \
             -D warnings \
@@ -143,6 +149,7 @@ jobs:
             -A clippy::collapsible_if \
             -A clippy::assertions_on_constants
       - name: Check provider registry drift
+        if: needs.changes.outputs.heavy == 'true'
         run: python3 scripts/check-provider-registry.py
       - name: Check harvested contributor credit
         if: github.event_name != 'schedule'
@@ -160,7 +167,11 @@ jobs:
             --author-map .github/AUTHOR_MAP \
             --range "$RANGE" \
             --check-authors
+      - name: Skip Rust lint for light change
+        if: needs.changes.outputs.heavy != 'true'
+        run: echo "No executable Rust changes detected; preserving required Lint context."
       - name: Linux clippy location
+        if: needs.changes.outputs.heavy == 'true'
         run: echo "Linux clippy/test gates run on CNB for mirrored fix/*, rebrand/*, work/v*, and main branches."
 
   whaleflow-rlm-cache:
@@ -186,7 +197,6 @@ jobs:
   test:
     name: Test
     needs: changes
-    if: needs.changes.outputs.heavy == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -194,72 +204,78 @@ jobs:
         # coverage CNB cannot provide.
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
+      - name: Skip tests for light change
+        if: needs.changes.outputs.heavy != 'true'
+        run: echo "No executable Rust changes detected; preserving required Test context."
       - uses: actions/checkout@v7
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
       - uses: dtolnay/rust-toolchain@stable
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
       - uses: mozilla-actions/sccache-action@v0.0.10
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
       - name: Enable sccache
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
         shell: bash
         run: |
           echo "SCCACHE_GHA_ENABLED=true" >> "${GITHUB_ENV}"
           echo "RUSTC_WRAPPER=sccache" >> "${GITHUB_ENV}"
       - uses: Swatinem/rust-cache@v2
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
         with:
           cache-bin: false
       - name: Run tests
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
         run: cargo test --workspace --all-features --locked
       - name: Lockfile drift guard
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
         run: git diff --exit-code -- Cargo.lock
       - name: Run Offline Eval Harness
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
         run: cargo run -p codewhale-tui --all-features -- eval
       - name: Linux test location
-        if: runner.os == 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os == 'Linux'
         run: echo "Linux workspace tests run on CNB for mirrored first-party branches."
 
   npm-wrapper-smoke:
     name: npm wrapper smoke
     needs: changes
-    if: github.event_name != 'schedule' && needs.changes.outputs.heavy == 'true'
+    if: github.event_name != 'schedule'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest","macos-latest","windows-latest"]') }}
     steps:
+      - name: Skip npm wrapper smoke for light change
+        if: needs.changes.outputs.heavy != 'true'
+        run: echo "No executable Rust changes detected; preserving required npm wrapper smoke context."
       - uses: actions/checkout@v7
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
       - uses: dtolnay/rust-toolchain@stable
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
       - uses: mozilla-actions/sccache-action@v0.0.10
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
       - name: Enable sccache
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
         shell: bash
         run: |
           echo "SCCACHE_GHA_ENABLED=true" >> "${GITHUB_ENV}"
           echo "RUSTC_WRAPPER=sccache" >> "${GITHUB_ENV}"
       - uses: actions/setup-node@v6
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
         with:
           node-version: 20
       - uses: Swatinem/rust-cache@v2
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
         with:
           cache-bin: false
       - name: Build wrapper binaries
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
         run: cargo build --release --locked -p codewhale-cli -p codewhale-tui
       - name: Smoke wrapper install and delegated entrypoints
-        if: runner.os != 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os != 'Linux'
         run: node scripts/release/npm-wrapper-smoke.js
       - name: Linux smoke location
-        if: runner.os == 'Linux'
+        if: needs.changes.outputs.heavy == 'true' && runner.os == 'Linux'
         run: echo "Linux npm wrapper smoke runs on CNB for mirrored first-party branches."
 
   mobile-smoke:

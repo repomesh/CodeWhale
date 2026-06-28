@@ -286,7 +286,7 @@ impl SkillRegistry {
         self.warnings.push(warning);
     }
 
-    fn parse_skill(_path: &Path, content: &str) -> std::result::Result<Skill, String> {
+    pub(crate) fn parse_skill(_path: &Path, content: &str) -> std::result::Result<Skill, String> {
         let trimmed = content.trim_start();
 
         // Try to parse frontmatter block first. If absent, fall back to
